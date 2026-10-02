@@ -1,45 +1,30 @@
-# [Project name]
+# IDX Radar
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Pemindai saham BEI berbahasa Indonesia dengan histori harian Yahoo Finance, kriteria teknikal yang transparan, grafik detail, watchlist lokal, dan diagnostik koneksi.
 
-## Run & Operate
+## Menjalankan di Replit
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- Gunakan tombol **Run** agar workflow web dan API yang sudah dikonfigurasi berjalan bersama.
+- Untuk menjalankan manual di dua terminal: `pnpm --filter @workspace/api-server run dev` dan `pnpm --filter @workspace/idx-radar run dev`.
+- Dependensi JavaScript dikelola oleh pnpm dan `pnpm-lock.yaml`.
+- Backend memerlukan Python 3.13+ dan `yfinance` 1.7+; dependensinya dicatat di `pyproject.toml` dan `uv.lock`. Secara default worker menggunakan `.pythonlibs/bin/python`. Untuk lokasi Python lain, atur `IDX_RADAR_PYTHON`.
+- Tidak diperlukan API key, akun Telegram/GitHub, atau database untuk menjalankan fitur yang tersedia.
+- Pemeriksaan aktual Yahoo Finance tersedia di menu **Diagnostik** melalui tombol **TES KONEKSI DATA**.
 
-## Stack
+## Pemeriksaan pengembangan
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- `pnpm --filter @workspace/idx-radar run typecheck`
+- `pnpm --filter @workspace/api-server run typecheck`
+- `pnpm --filter @workspace/api-spec run codegen` setelah mengubah `lib/api-spec/openapi.yaml`
 
-## Where things live
+## Struktur utama
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/idx-radar` — aplikasi web React/Vite.
+- `artifacts/api-server/src/routes/market.ts` — endpoint pemindai, detail saham, dan diagnostik.
+- `artifacts/api-server/src/market_data.py` — pengambilan data `yfinance` dan perhitungan kriteria.
+- `lib/api-spec/openapi.yaml` — kontrak API dan skema data.
+- `pyproject.toml` / `uv.lock` — dependensi Python.
 
-## Architecture decisions
+## Batasan data
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
-
-## Product
-
-_Describe the high-level user-facing capabilities of this app once they exist._
-
-## User preferences
-
-_Populate as you build — explicit user instructions worth remembering across sessions._
-
-## Gotchas
-
-_Populate as you build — sharp edges, "always run X before Y" rules._
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+Yahoo Finance menyediakan histori harian, bukan harga streaming real-time. Status per saham membedakan data tersedia, tertunda, tidak tersedia, dan gagal; data kosong tidak diganti dengan harga contoh. Watchlist disimpan di browser/perangkat yang dipakai. Aplikasi tidak mengirim order beli atau jual otomatis.

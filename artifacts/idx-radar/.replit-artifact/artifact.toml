@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "IDX Radar"
+description = "Pemindai saham BEI untuk trading harian dengan data historis Yahoo Finance yang diambil melalui yfinance, pemeriksaan teknikal transparan, watchlist tersimpan, dan diagnostik koneksi."
+version = "1.0.0"
+id = "artifacts/idx-radar"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21676
+
+[services.development]
+run = "pnpm --filter @workspace/idx-radar run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/idx-radar", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/idx-radar/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21676"
+BASE_PATH = "/"

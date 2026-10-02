@@ -10,6 +10,10 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: market
+    description: Live and historical IDX market data
+  - name: diagnostics
+    description: Data-source connectivity checks
 paths:
   /healthz:
     get:
@@ -24,6 +28,76 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /scanner:
+    get:
+      operationId: getScanner
+      tags: [market]
+      summary: Scan configured IDX shares using Yahoo Finance history
+      responses:
+        "200":
+          description: Scanner results, including unavailable and failed data states
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScannerResponse"
+  /symbols:
+    get:
+      operationId: getSymbols
+      tags: [market]
+      summary: List supported IDX share symbols
+      responses:
+        "200":
+          description: Supported share symbols
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StockSymbol"
+  /stocks/{symbol}:
+    get:
+      operationId: getStockDetail
+      tags: [market]
+      summary: Get daily history and technical levels for an IDX share
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Historical stock detail, or an explicit unavailable state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockDetail"
+        "400":
+          description: Unsupported symbol
+  /diagnostics:
+    get:
+      operationId: getDiagnostics
+      tags: [diagnostics]
+      summary: Check server internet and Yahoo Finance data access
+      responses:
+        "200":
+          description: Diagnostics with original connection error messages when checks fail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiagnosticResult"
+  /diagnostics/connection-test:
+    post:
+      operationId: testDataConnection
+      tags: [diagnostics]
+      summary: Fetch BBCA.JK and BBRI.JK now to test Yahoo Finance
+      responses:
+        "200":
+          description: Actual connection test results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiagnosticResult"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +107,223 @@ components:
           type: string
       required:
         - status
+    DataState:
+      type: string
+      enum: [available, delayed, unavailable, failed]
+    CriterionState:
+      type: string
+      enum: [pass, fail, unavailable]
+    StockSymbol:
+      type: object
+      properties:
+        symbol:
+          type: string
+        name:
+          type: string
+        sector:
+          type: string
+      required: [symbol, name, sector]
+    ScanCriterion:
+      type: object
+      properties:
+        state:
+          $ref: "#/components/schemas/CriterionState"
+        value:
+          type: [number, "null"]
+        target:
+          type: [number, "null"]
+        description:
+          type: string
+      required: [state, value, target, description]
+    ScanCriteria:
+      type: object
+      properties:
+        breakout:
+          $ref: "#/components/schemas/ScanCriterion"
+        volume:
+          $ref: "#/components/schemas/ScanCriterion"
+        macd:
+          $ref: "#/components/schemas/ScanCriterion"
+        turnover:
+          $ref: "#/components/schemas/ScanCriterion"
+      required: [breakout, volume, macd, turnover]
+    ScannedStock:
+      type: object
+      properties:
+        symbol:
+          type: string
+        name:
+          type: string
+        state:
+          $ref: "#/components/schemas/DataState"
+        error:
+          type: [string, "null"]
+        open:
+          type: [number, "null"]
+        high:
+          type: [number, "null"]
+        low:
+          type: [number, "null"]
+        close:
+          type: [number, "null"]
+        change:
+          type: [number, "null"]
+        changePercent:
+          type: [number, "null"]
+        volume:
+          type: [integer, "null"]
+        averageTurnover:
+          type: [number, "null"]
+        lastTradingDate:
+          type: [string, "null"]
+        updatedAt:
+          type: [string, "null"]
+        criteria:
+          $ref: "#/components/schemas/ScanCriteria"
+      required:
+        - symbol
+        - name
+        - state
+        - error
+        - open
+        - high
+        - low
+        - close
+        - change
+        - changePercent
+        - volume
+        - averageTurnover
+        - lastTradingDate
+        - updatedAt
+        - criteria
+    ScannerResponse:
+      type: object
+      properties:
+        source:
+          type: string
+        updatedAt:
+          type: string
+        state:
+          $ref: "#/components/schemas/DataState"
+        stocks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScannedStock"
+      required: [source, updatedAt, state, stocks]
+    DailyCandle:
+      type: object
+      properties:
+        date:
+          type: string
+        open:
+          type: number
+        high:
+          type: number
+        low:
+          type: number
+        close:
+          type: number
+        volume:
+          type: integer
+        macd:
+          type: [number, "null"]
+        signal:
+          type: [number, "null"]
+        histogram:
+          type: [number, "null"]
+      required: [date, open, high, low, close, volume, macd, signal, histogram]
+    PriceLevel:
+      type: object
+      properties:
+        price:
+          type: number
+        date:
+          type: string
+      required: [price, date]
+    StockDetail:
+      type: object
+      properties:
+        symbol:
+          type: string
+        name:
+          type: string
+        state:
+          $ref: "#/components/schemas/DataState"
+        error:
+          type: [string, "null"]
+        source:
+          type: string
+        updatedAt:
+          type: [string, "null"]
+        lastTradingDate:
+          type: [string, "null"]
+        candles:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailyCandle"
+        support:
+          type: array
+          items:
+            $ref: "#/components/schemas/PriceLevel"
+        resistance:
+          type: array
+          items:
+            $ref: "#/components/schemas/PriceLevel"
+      required:
+        - symbol
+        - name
+        - state
+        - error
+        - source
+        - updatedAt
+        - lastTradingDate
+        - candles
+        - support
+        - resistance
+    ConnectivityCheck:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success, failed]
+        message:
+          type: string
+        error:
+          type: [string, "null"]
+        checkedAt:
+          type: string
+      required: [status, message, error, checkedAt]
+    TickerTestResult:
+      type: object
+      properties:
+        symbol:
+          type: string
+        status:
+          type: string
+          enum: [success, failed]
+        rows:
+          type: integer
+        lastTradingDate:
+          type: [string, "null"]
+        close:
+          type: [number, "null"]
+        error:
+          type: [string, "null"]
+      required: [symbol, status, rows, lastTradingDate, close, error]
+    DiagnosticResult:
+      type: object
+      properties:
+        source:
+          type: string
+        testedAt:
+          type: string
+        internet:
+          $ref: "#/components/schemas/ConnectivityCheck"
+        yahoo:
+          $ref: "#/components/schemas/ConnectivityCheck"
+        tickers:
+          type: array
+          items:
+            $ref: "#/components/schemas/TickerTestResult"
+      required: [source, testedAt, internet, yahoo, tickers]
 
